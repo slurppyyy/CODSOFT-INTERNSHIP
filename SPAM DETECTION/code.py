@@ -1,9 +1,13 @@
-import numpy as np # linear algebra
+"""
+Import necessary libraries and modules.
+"""
+import numpy as np 
 import pandas as pd 
 import tensorflow as tf
 import seaborn as sns
 import matplotlib.pyplot as plt
-import nltk
+
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report,confusion_matrix,accuracy_score
@@ -13,29 +17,32 @@ from keras.layers import Embedding,LSTM,Dropout,Dense
 from keras.callbacks import EarlyStopping,ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from sklearn import preprocessing
+
+import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
 from wordcloud import WordCloud
 nltk.download('punkt')
 nltk.download('stopwords') 
-# data processing, CSV file I/O (e.g. pd.read_csv)
-​
-# Input data files are available in the read-only "../input/" directory
-# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
-​
-import os
-for dirname, _, filenames in os.walk('/kaggle/input'):
-    for filename in filenames:
-        print(os.path.join(dirname, filename))
 
 
+"""
+Load the dataset from a CSV file and perform initial data analysis.
+"""
 data_file=pd.read_csv('/kaggle/input/spam-data-csv/spam.csv',engine='python',encoding='latin-1')
 print(data_file.head())
 print(data_file.shape)
+"""
+Visualize the distribution of 'ham' and 'spam' messages in the dataset.
+"""
 sns.countplot(x='v1',data=data_file)
 plt.show()
 
+
+"""
+Create a balanced dataset by oversampling 'ham' messages to match the count of 'spam' messages.
+"""
 ham_msges=data_file[data_file['v1']=='ham']
 spam_msges=data_file[data_file['v1']=='spam']
 ham_msges=ham_msges.sample(n=len(spam_msges),random_state=1)
@@ -43,6 +50,9 @@ balanced_data=pd.concat([ham_msges,spam_msges],ignore_index=True)
 sns.countplot(x='v1',data=balanced_data)
 plt.show()
 
+"""
+Clean text data by removing non-alphabetic characters, converting to lowercase, tokenizing, removing stopwords, and stemming.
+"""
 def clean_text(texts):
     text = ''.join([c for c in texts if c.isalpha() or c.isspace()])
   #converting to lower case
@@ -61,7 +71,10 @@ def clean_text(texts):
     cleaned_txt = '  '.join(poststem)
     
     return cleaned_txt
-
+    
+"""
+Generate word clouds for 'ham' and 'spam' emails to visualize common words.
+"""
 def word_cloud_gen(datasource,type):
     data_string="  ".join(datasource['CLEANED'])
     plt.figure(figsize=(7,7))
@@ -75,7 +88,9 @@ def word_cloud_gen(datasource,type):
     plt.axis('off')
     plt.show()
 
-
+"""
+The main function that coordinates the data preprocessing, analysis, and word cloud generation.
+"""
 def main():
     balanced_data['CLEANED']=balanced_data['v2'].apply(clean_text)
     print(balanced_data['CLEANED'].head())
@@ -84,13 +99,22 @@ def main():
     word_cloud_gen(balanced_data[balanced_data['v1']=='spam'],'SPAM')
     word_cloud_gen(balanced_data[balanced_data['v1']=='ham'],'HAM')
 
+"""
+Label encoding for the target variable 'v1' ('ham' or 'spam').
+"""
 label_encoder=LabelEncoder()
 labels = balanced_data['v1']
 label_encoder.fit(labels)
 encoded_labels = label_encoder.transform(labels)
 
+"""
+Split the data into training and testing sets.
+"""
 X_train,X_test,y_train,y_test=train_test_split(balanced_data['CLEANED'],balanced_data['v1'],test_size=0.2,random_state=42)
 
+"""
+Tokenize and pad sequences for the text data.
+"""
 tokenizer=Tokenizer()
 tokenizer.fit_on_texts(X_train)
 train_seq=tokenizer.texts_to_sequences(X_train)
@@ -104,7 +128,9 @@ test_seq = pad_sequences(test_seq,
                                maxlen=max_len, 
                                padding='post', 
                                truncating='post')
-
+"""
+Build and compile a neural network model for text classification.
+"""
 model=tf.keras.models.Sequential()
 #EMBEDDING LAYER
 model.add(Embedding(input_dim=len(tokenizer.word_index) + 1,
@@ -118,9 +144,16 @@ model.add(LSTM(128, return_sequences=True))
 model.add(Dense(32, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
 
+
+"""
+Compile the model with loss, optimizer, and metrics.
+"""
 #compiling model
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 model.summary()
+"""
+Define callbacks for early stopping and learning rate reduction.
+"""
 early_stop=EarlyStopping(patience=5,monitor='val_accuracy',restore_best_weights=True)
 lr_stop=ReduceLROnPlateau(patience = 2,
                        monitor = 'val_loss',
