@@ -1,28 +1,36 @@
-import os
-for dirname, _, filenames in os.walk('/kaggle/input'):
-    for filename in filenames:
-        print(os.path.join(dirname, filename))
-
+"""
+Import necessary libraries and modules.
+"""
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt 
+
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
 nltk.download('punkt')
 nltk.download('stopwords')
-import matplotlib.pyplot as plt 
+
+
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, classification_report
 
+"""
+Define a function to load data from a CSV file and perform initial data processing.
+"""
 def load_data(file_path):
     df=pd.read_csv(file_path,sep=':::', header=None, engine='python',encoding='utf-8')
     df.columns=(['ID','TITLE','GENRE','DESCRIPTION'])
     return(df)
+    
 
+"""
+Define a function to preprocess text data.
+"""
 def data_preprocess(texts):
    #text=re.sub(r'[^a-zA-Z\s]',' ',text)
    text = ''.join([c for c in texts if c.isalpha() or c.isspace()])
@@ -40,13 +48,19 @@ def data_preprocess(texts):
    poststem = [stemmer.stem(s) for s in good_words]
    cleaned_txt = '  '.join(poststem)
    return cleaned_txt
-
+    
+"""
+Define a function to clean the data and check for null values and duplicates.
+"""
 def clean_data(data):
     #check for null values in dataset
     null_vall=data.isnull().sum()
     duplicates=data.duplicated().sum()
     return null_vall,duplicates
-    
+
+"""
+Define a function to perform exploratory data analysis (EDA) on the data.
+"""    
 def eda_analysis(cleaned_text):
     genre_counts=cleaned_text.value_counts()
     plt.figure(figsize=(12,6))
@@ -56,28 +70,45 @@ def eda_analysis(cleaned_text):
     plt.ylabel('COUNT')
     plt.title('TITLE')
     plt.show()
-    
+
+"""
+Define a function to split the data into training and testing sets.
+"""
 def split_data(data):
     X=data['DESCRIPTION']
     y=data['GENRE']
     X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=1)
     return X_train,X_test,y_train,y_test
 
+"""
+Define a function to vectorize text data using TF-IDF.
+"""
 def vectorize(X_train,X_test):
     vectorizer=TfidfVectorizer(max_features=1000)
     X_train_vect=vectorizer.fit_transform(X_train)
     X_test_vect=vectorizer.transform(X_test)
     return X_train_vect,X_test_vect,vectorizer
-
+    
+"""
+Define a function to build a Support Vector Machine (SVM) model.
+"""
 def build_model(X_train_vect,y_train):
     svm_classifier=SVC(kernel='linear',C=1.0)
     svm_classifier.fit(X_train_vect,y_train)
     return svm_classifier
+
+"""
+Define a function to evaluate the model's accuracy and provide a classification report.
+"""
 def model_accuracy(model,X_test_vect,y_test):
     y_pred=model.predict(X_test_vect)
     accuracy=accuracy_score(y_pred,y_test)
     report=classification_report(y_pred,y_test)
     return accuracy,report
+    
+"""
+Define a function to visualize data, including text length histograms.
+"""
 def visualize(data):
     plt.figure(figsize=(12,6))
     plt.subplot(1,2,1)
